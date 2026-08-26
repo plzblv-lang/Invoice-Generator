@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ben Shum — Invoice Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --navy: #1a1a2e;
+    --navy-mid: #2d2d4e;
+    --gold: #c9a84c;
+    --gold-light: #f0d98a;
+    --bg: #f4f4f0;
+    --white: #ffffff;
+    --grey-light: #e8e8e2;
+    --grey-mid: #9a9a8e;
+    --text: #1a1a1a;
+    --green: #2d6a4f;
+    --green-bg: #eaf4ef;
+    --red: #c0392b;
+    --red-bg: #fdf0ee;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--navy);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  header h1 {
+    color: var(--white);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  header span {
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  /* Sheet config */
+  .sheet-bar {
+    background: var(--white);
+    border: 1.5px solid var(--grey-light);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  .sheet-bar .field {
+    flex: 1;
+  }
+
+  .sheet-bar label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--grey-mid);
+    margin-bottom: 6px;
+  }
+
+  .sheet-bar input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--grey-light);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+
+  .sheet-bar input:focus {
+    outline: none;
+    border-color: var(--navy);
+  }
+
+  .sheet-bar button {
+    padding: 9px 18px;
+    background: var(--navy-mid);
+    color: var(--white);
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+
+  .sheet-bar button:hover { background: var(--navy); }
+
+  /* Main card */
+  .card {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+
+  .card-header {
+    background: var(--navy);
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .card-header h2 {
+    color: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .card-header p {
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .step-badge {
+    width: 32px; height: 32px;
+    background: var(--gold);
+    color: var(--navy);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .card-body { padding: 28px; }
+
+  /* Job lookup */
+  .lookup-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+  }
+
+  .lookup-row .field { flex: 1; }
+
+  label.field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--grey-mid);
+    margin-bottom: 6px;
+  }
+
+  input.big-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--grey-light);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: inherit;
+    letter-spacing: 0.04em;
+    color: var(--navy);
+    background: var(--bg);
+    transition: border-color 0.15s;
+  }
+
+  input.big-input:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: var(--white);
+  }
+
+  button.lookup-btn {
+    padding: 12px 24px;
+    background: var(--gold);
+    color: var(--navy);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  button.lookup-btn:hover { background: var(--gold-light); }
+  button.lookup-btn:active { transform: scale(0.98); }
+
+  /* Status messages */
+  .status {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .status.success { background: var(--green-bg); color: var(--green); display: block; }
+  .status.error { background: var(--red-bg); color: var(--red); display: block; }
+  .status.loading { background: #eef0ff; color: #3a3aaa; display: block; }
+
+  /* Job details */
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .detail-box {
+    background: var(--bg);
+    border: 1.5px solid var(--grey-light);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .detail-box .dlabel {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--grey-mid);
+    margin-bottom: 4px;
+  }
+
+  .detail-box .dval {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
+  .detail-box .dval.editable-val {
+    background: none;
+    border: none;
+    width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy);
+    font-family: inherit;
+    padding: 0;
+    cursor: text;
+  }
+  .detail-box .dval.editable-val:focus {
+    outline: none;
+    border-bottom: 1.5px solid var(--gold);
+  }
+
+  /* Pricing */
+  .pricing-section {
+    border-top: 1.5px solid var(--grey-light);
+    padding-top: 24px;
+    margin-bottom: 24px;
+  }
+
+  .pricing-section h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--grey-mid);
+    margin-bottom: 14px;
+  }
+
+  .price-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .price-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--navy);
+    color: var(--white);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .price-table th:last-child, .price-table td:last-child { text-align: right; }
+
+  .price-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--grey-light);
+    vertical-align: middle;
+  }
+
+  .price-table tr.main-item td { font-weight: 500; }
+  .price-table tr.main-item.highlight td { background: #fffbf0; }
+
+  .price-table tr.addon td { color: var(--grey-mid); font-size: 12px; }
+  .price-table tr.addon.highlight td { background: #fffbf0; color: var(--text); font-weight: 500; }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .tag-auto { background: #dbeafe; color: #1e40af; }
+  .tag-ms   { background: #dcfce7; color: #166534; }
+
+  /* Totals */
+  .totals {
+    background: var(--bg);
+    border: 1.5px solid var(--grey-light);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--grey-mid);
+    margin-bottom: 6px;
+  }
+
+  .totals-row.total {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--navy);
+    border-top: 1.5px solid var(--grey-light);
+    padding-top: 10px;
+    margin-top: 4px;
+    margin-bottom: 0;
+  }
+
+  /* Generate button */
+  button.generate-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  button.generate-btn:hover { background: var(--navy-mid); }
+  button.generate-btn:active { transform: scale(0.99); }
+  button.generate-btn:disabled { background: var(--grey-mid); cursor: not-allowed; }
+
+  .invoice-no-note {
+    text-align: center;
+    font-size: 12px;
+    color: var(--grey-mid);
+    margin-top: 10px;
+  }
+
+  /* Invoice preview section */
+  #preview-section {
+    margin-top: 28px;
+    display: none;
+  }
+
+  #preview-section h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--grey-mid);
+    margin-bottom: 12px;
+  }
+
+  .invoice-preview {
+    border: 1.5px solid var(--grey-light);
+    border-radius: 10px;
+    padding: 32px 36px;
+    font-size: 13px;
+    line-height: 1.5;
+    background: var(--white);
+  }
+
+  .inv-header { display: flex; justify-content: space-between; margin-bottom: 24px; }
+  .inv-name { font-size: 22px; font-weight: 700; color: var(--navy); }
+  .inv-title-word { font-size: 28px; font-weight: 700; color: var(--navy); text-align: right; }
+  .inv-sub { font-size: 11px; color: var(--grey-mid); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  .inv-details { font-size: 12px; color: #555; line-height: 1.7; }
+  .inv-divider { border: none; border-top: 2px solid var(--navy); margin: 18px 0; }
+  .inv-meta { display: flex; justify-content: space-between; margin-bottom: 24px; }
+  .inv-billto h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--grey-mid); margin-bottom: 6px; }
+  .inv-billto p { font-size: 12px; line-height: 1.7; }
+  .inv-billto strong { font-size: 14px; }
+  .inv-ref { text-align: right; font-size: 12px; line-height: 1.9; }
+  .inv-ref strong { font-size: 13px; }
+  .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+  .inv-table th { background: var(--navy); color: #fff; padding: 8px 12px; font-size: 11px; font-weight: 600; }
+  .inv-table th:last-child, .inv-table td:last-child { text-align: right; }
+  .inv-table td { padding: 10px 12px; border-bottom: 1px solid var(--grey-light); }
+  .inv-totals { margin-left: auto; width: 260px; font-size: 12px; }
+  .inv-totals-row { display: flex; justify-content: space-between; padding: 4px 0; color: #555; }
+  .inv-totals-row.total { font-weight: 700; font-size: 14px; color: var(--navy); border-top: 1.5px solid var(--grey-light); padding-top: 8px; margin-top: 4px; }
+  .inv-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--navy); margin: 18px 0 6px; }
+  .inv-divider-thin { border: none; border-top: 1px solid var(--grey-light); margin-bottom: 8px; }
+  .inv-footer { text-align: center; font-size: 10px; color: var(--grey-mid); margin-top: 24px; border-top: 1px solid var(--grey-light); padding-top: 12px; }
+
+  .download-row { display: flex; gap: 12px; margin-top: 16px; }
+  .download-row button {
+    flex: 1; padding: 12px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+  }
+  .download-row button:hover { opacity: 0.85; }
+  .btn-pdf { background: var(--navy); color: var(--white); }
+  .btn-new { background: var(--grey-light); color: var(--navy); }
+
+  @media (max-width: 600px) {
+    .details-grid { grid-template-columns: 1fr; }
+    .lookup-row { flex-direction: column; }
+    .lookup-row button { width: 100%; }
+    .sheet-bar { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ben Shum — Invoice Generator</h1>
+  <span>Platinum Elevators</span>
+</header>
+
+<div class="container">
+
+  <!-- Sheet config (optional override) -->
+  <details style="margin-bottom:16px">
+    <summary style="font-size:12px;color:var(--grey-mid);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:6px">
+      <span style="font-size:10px">⚙</span> Sheet settings (already connected — only change if needed)
+    </summary>
+    <div class="sheet-bar" style="margin-top:10px;margin-bottom:0">
+      <div class="field">
+        <label>Google Sheet link</label>
+        <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..." />
+      </div>
+      <button onclick="saveSheetUrl()">Save Link</button>
+    </div>
+  </details>
+
+  <!-- Main card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge">1</div>
+      <div>
+        <h2>Enter Job Number</h2>
+        <p>Pulls address, product type and pricing from your Google Sheet automatically</p>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="lookup-row">
+        <div class="field">
+          <label class="field-label">Job Number</label>
+          <input type="text" class="big-input" id="job-input" placeholder="e.g. V2233" onkeydown="if(event.key==='Enter') lookupJob()" />
+        </div>
+        <button class="lookup-btn" onclick="lookupJob()">Look Up →</button>
+      </div>
+
+      <div class="status" id="status-msg"></div>
+
+      <!-- Job details (hidden until lookup) -->
+      <div id="job-details" style="display:none">
+
+        <div class="details-grid">
+          <div class="detail-box">
+            <div class="dlabel">Job Number</div>
+            <div class="dval" id="d-jobno">—</div>
+          </div>
+          <div class="detail-box">
+            <div class="dlabel">Invoice Date</div>
+            <div class="dval" id="d-date">—</div>
+          </div>
+          <div class="detail-box">
+            <div class="dlabel">Site Address</div>
+            <div class="dval" id="d-address">—</div>
+          </div>
+          <div class="detail-box">
+            <div class="dlabel">Product Type</div>
+            <div class="dval" id="d-product">—</div>
+          </div>
+          <div class="detail-box" id="inv-no-box">
+            <div class="dlabel">Invoice Number</div>
+            <input type="text" class="dval editable-val" id="d-invno" placeholder="e.g. PE006" />
+          </div>
+          <div class="detail-box">
+            <div class="dlabel">Invoice Number Note</div>
+            <div class="dval" style="font-size:11px;color:var(--grey-mid);font-weight:400">Edit above if needed</div>
+          </div>
+        </div>
+
+        <div class="pricing-section">
+          <h3>Line Items</h3>
+          <table class="price-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th style="text-align:right">Ex GST</th>
+                <th style="text-align:right">GST</th>
+              </tr>
+            </thead>
+            <tbody id="line-items">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="totals">
+          <div class="totals-row"><span>Subtotal</span><span id="t-subtotal">—</span></div>
+          <div class="totals-row"><span>GST (10%)</span><span id="t-gst">—</span></div>
+          <div class="totals-row total"><span>TOTAL DUE</span><span id="t-total">—</span></div>
+        </div>
+
+        <button class="generate-btn" onclick="generateInvoice()">
+          ⬇ Generate Invoice PDF
+        </button>
+        <p class="invoice-no-note" id="inv-note"></p>
+
+      </div><!-- end job-details -->
+
+    </div><!-- end card-body -->
+  </div><!-- end card -->
+
+  <!-- Preview -->
+  <div id="preview-section">
+    <h3>Invoice Preview</h3>
+    <div class="invoice-preview" id="invoice-preview"></div>
+    <div class="download-row">
+      <button class="btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+      <button class="btn-new" onclick="resetForm()">+ New Invoice</button>
+    </div>
+  </div>
+
+</div><!-- end container -->
+
+<script>
+// ─── Config ────────────────────────────────────────────────────────────────
+
+const BEN = {
+  name: "BEN SHUM",
+  title: "ELEVATOR INSTALLER",
+  address: "63 Morgan St, Carnegie VIC 3163",
+  phone: "0411 187 192",
+  email: "plzblv@gmail.com",
+  abn: "38 411 314 075",
+};
+
+const CLIENT = {
+  name: "Platinum Elevators",
+  address: "Suite 19/2 Kirkham Rd West",
+  suburb: "Keysborough VIC 3173",
+  phone: "(03) 8672 0372",
+  email: "operations@platinumelevators.com.au",
+};
+
+const PAYMENT = {
+  bank: "Commonwealth Bank",
+  accountName: "Ben Shum",
+  bsb: "063-791",
+  accountNo: "12689390",
+};
+
+// Pricing table
+const PRICES = {
+  // AUTO = Residential Royal (Auto Sliding Doors)
+  "AUTO-2": { desc: "Residential Royal – 2 STOP SE (Auto Sliding Doors)", price: 6500 },
+  "AUTO-3": { desc: "Residential Royal – 3 STOP SE (Auto Sliding Doors)", price: 7400 },
+  "AUTO-4": { desc: "Residential Royal – 4 STOP SE (Auto Sliding Doors)", price: 8300 },
+  // MS = Residential Sovereign/Classic (Manual Swing Doors)
+  "MS-2":   { desc: "Residential Sovereign/Classic – 2 STOP SE (Manual Swing Doors)", price: 5000 },
+  "MS-3":   { desc: "Residential Sovereign/Classic – 3 STOP SE (Manual Swing Doors)", price: 5900 },
+  "MS-4":   { desc: "Residential Sovereign/Classic – 4 STOP SE (Manual Swing Doors)", price: 6800 },
+};
+
+// TH & ADJ add-on prices
+const TH_ADJ = { "MS": 400, "AUTO": 600 };
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let currentJob = null;
+let invoiceData = null;
+
+// ─── Sheet URL ──────────────────────────────────────────────────────────────
+const DEFAULT_SHEET_ID = '1LUqEUBNvDag13UpoZa3AuHQasF8lq3YO4h-7LBXiaa8';
+
+function saveSheetUrl() {
+  const url = document.getElementById('sheet-url').value.trim();
+  if (url) {
+    localStorage.setItem('sheetUrl', url);
+    showStatus('Sheet link saved!', 'success');
+    setTimeout(() => hideStatus(), 3000);
+  }
+}
+
+function getActiveSheetUrl() {
+  const saved = localStorage.getItem('sheetUrl');
+  if (saved && saved.trim()) return saved.trim();
+  return `https://docs.google.com/spreadsheets/d/${DEFAULT_SHEET_ID}/edit`;
+}
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('sheetUrl');
+  if (saved) document.getElementById('sheet-url').value = saved;
+  else document.getElementById('sheet-url').value = `https://docs.google.com/spreadsheets/d/${DEFAULT_SHEET_ID}/edit`;
+});
+
+// ─── Sheet fetch ────────────────────────────────────────────────────────────
+function getSheetId(url) {
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchSheetData(sheetId) {
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+  const res = await fetch(csvUrl);
+  if (!res.ok) throw new Error("Could not access sheet. Make sure it's shared as 'Anyone with link can view'.");
+  const text = await res.text();
+  return parseCSV(text);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
+    const row = {};
+    headers.forEach((h, i) => {
+      row[h] = (vals[i] || '').trim().replace(/^"|"$/g,'');
+    });
+    return row;
+  });
+}
+
+// ─── Lookup ─────────────────────────────────────────────────────────────────
+async function lookupJob() {
+  const jobNo = document.getElementById('job-input').value.trim().toUpperCase();
+  if (!jobNo) { showStatus('Please enter a job number.', 'error'); return; }
+
+  const sheetUrl = getActiveSheetUrl();
+
+  showStatus('Looking up job ' + jobNo + '...', 'loading');
+
+  try {
+    const sheetId = getSheetId(sheetUrl);
+    if (!sheetId) throw new Error("Invalid Google Sheet URL.");
+
+    const rows = await fetchSheetData(sheetId);
+
+    // Find matching row — check "Job No." column
+    const jobCol = Object.keys(rows[0]).find(k => k.toLowerCase().includes('job') && k.toLowerCase().includes('no'));
+    const row = rows.find(r => (r[jobCol] || '').trim().toUpperCase() === jobNo);
+
+    if (!row) {
+      showStatus(`Job ${jobNo} not found in sheet. Check the job number and try again.`, 'error');
+      return;
+    }
+
+    populateJob(jobNo, row);
+    showStatus(`✓ Found job ${jobNo} — ${row['Address']}, ${row['Suburb']}`, 'success');
+
+  } catch (err) {
+    showStatus('Error: ' + err.message, 'error');
+  }
+}
+
+function populateJob(jobNo, row) {
+  const address = (row['Address'] || '') + ', ' + (row['Suburb'] || '');
+  const floorDoor = (row['Floors / Door Type'] || '').trim().toUpperCase();
+
+  // Parse stops and door type from e.g. "3 Stop MS" or "2 Stop AUTO"
+  const stopMatch = floorDoor.match(/(\d)\s*STOP/i);
+  const stops = stopMatch ? stopMatch[1] : null;
+  const isAuto = floorDoor.includes('AUTO');
+  const isMS   = floorDoor.includes('MS');
+  const doorType = isAuto ? 'AUTO' : (isMS ? 'MS' : null);
+
+  // Check Door Orientation column for Through Entry or Adjacent Entry
+  const doorOrientation = (row['Door Orientation'] || row['TH & ADJ'] || '').trim().toUpperCase();
+  const thAdj = doorOrientation.includes('TH') || doorOrientation.includes('ADJ') || doorOrientation === 'YES';
+
+  const priceKey = doorType && stops ? `${doorType}-${stops}` : null;
+  const priceItem = priceKey ? PRICES[priceKey] : null;
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-AU', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  // Auto-suggest next invoice number
+  const lastInv = localStorage.getItem('lastInvoiceNo') || 'PE004';
+  const nextNum = parseInt(lastInv.replace('PE','')) + 1;
+  const nextInv = 'PE' + String(nextNum).padStart(3, '0');
+
+  currentJob = { jobNo, address, floorDoor, doorType, stops, priceItem, thAdj, doorOrientation, dateStr, nextInv };
+
+  // Populate UI
+  document.getElementById('d-jobno').textContent = jobNo;
+  document.getElementById('d-date').textContent = dateStr;
+  document.getElementById('d-address').textContent = address;
+  document.getElementById('d-invno').value = nextInv;
+
+  const tagHtml = doorType === 'AUTO'
+    ? `<span class="tag tag-auto">AUTO</span>`
+    : doorType === 'MS' ? `<span class="tag tag-ms">MS</span>` : '';
+  document.getElementById('d-product').innerHTML = `${stops ? stops + ' Stop' : '?'} ${doorType || '?'} ${tagHtml}`;
+
+  // Line items
+  const tbody = document.getElementById('line-items');
+  tbody.innerHTML = '';
+  let subtotal = 0;
+
+  if (priceItem) {
+    subtotal += priceItem.price;
+    tbody.innerHTML += `
+      <tr class="main-item highlight">
+        <td>${priceItem.desc}</td>
+        <td style="text-align:right">$${priceItem.price.toLocaleString('en-AU', {minimumFractionDigits:2})}</td>
+        <td style="text-align:right">$${(priceItem.price*0.1).toLocaleString('en-AU', {minimumFractionDigits:2})}</td>
+      </tr>`;
+  } else {
+    tbody.innerHTML += `<tr class="main-item"><td colspan="3" style="color:var(--grey-mid)">⚠ Could not determine product — check Floors/Door Type column</td></tr>`;
+  }
+
+  if (thAdj && doorType) {
+    const adj = TH_ADJ[doorType];
+    subtotal += adj;
+    const adjLabel = doorOrientation.includes('TH') ? 'Through Entry' : doorOrientation.includes('ADJ') ? 'Adjacent Entry' : 'TH & ADJ Entry';
+    tbody.innerHTML += `
+      <tr class="addon highlight">
+        <td>${adjLabel}</td>
+        <td style="text-align:right">$${adj.toLocaleString('en-AU', {minimumFractionDigits:2})}</td>
+        <td style="text-align:right">$${(adj*0.1).toLocaleString('en-AU', {minimumFractionDigits:2})}</td>
+      </tr>`;
+  }
+
+  const gst = subtotal * 0.1;
+  const total = subtotal + gst;
+  document.getElementById('t-subtotal').textContent = '$' + subtotal.toLocaleString('en-AU', {minimumFractionDigits:2});
+  document.getElementById('t-gst').textContent = '$' + gst.toLocaleString('en-AU', {minimumFractionDigits:2});
+  document.getElementById('t-total').textContent = '$' + total.toLocaleString('en-AU', {minimumFractionDigits:2});
+
+  currentJob.subtotal = subtotal;
+  currentJob.gst = gst;
+  currentJob.total = total;
+
+  document.getElementById('job-details').style.display = 'block';
+  document.getElementById('preview-section').style.display = 'none';
+}
+
+// ─── Generate Invoice ────────────────────────────────────────────────────────
+function generateInvoice() {
+  if (!currentJob) return;
+  const invNo = document.getElementById('d-invno').value.trim() || currentJob.nextInv;
+  const j = currentJob;
+
+  const lines = [];
+  if (j.priceItem) {
+    lines.push({ desc: j.priceItem.desc, ex: j.priceItem.price, gst: j.priceItem.price * 0.1 });
+  }
+  if (j.thAdj && j.doorType) {
+    const adj = TH_ADJ[j.doorType];
+    const adjLabel = (j.doorOrientation || '').includes('TH') ? 'Through Entry' : (j.doorOrientation || '').includes('ADJ') ? 'Adjacent Entry' : 'TH & ADJ Entry';
+    lines.push({ desc: adjLabel, ex: adj, gst: adj * 0.1 });
+  }
+
+  invoiceData = { invNo, jobNo: j.jobNo, date: j.dateStr, address: j.address, lines, subtotal: j.subtotal, gst: j.gst, total: j.total };
+
+  // Build preview HTML
+  const linesHtml = lines.map(l => `
+    <tr>
+      <td>${l.desc}</td>
+      <td>$${l.ex.toLocaleString('en-AU',{minimumFractionDigits:2})}</td>
+      <td>$${l.gst.toLocaleString('en-AU',{minimumFractionDigits:2})}</td>
+    </tr>`).join('');
+
+  document.getElementById('invoice-preview').innerHTML = `
+    <div class="inv-header">
+      <div>
+        <div class="inv-name">${BEN.name}</div>
+        <div class="inv-sub">${BEN.title}</div>
+        <div class="inv-details" style="margin-top:8px">
+          ${BEN.address}<br>
+          Phone: ${BEN.phone}<br>
+          Email: ${BEN.email}<br>
+          ABN: ${BEN.abn}
+        </div>
+      </div>
+      <div class="inv-title-word">INVOICE</div>
+    </div>
+    <hr class="inv-divider">
+    <div class="inv-meta">
+      <div class="inv-billto">
+        <h4>Bill To</h4>
+        <p><strong>${CLIENT.name}</strong><br>
+        ${CLIENT.address}<br>${CLIENT.suburb}<br>
+        Phone: ${CLIENT.phone}<br>Email: ${CLIENT.email}</p>
+      </div>
+      <div class="inv-ref">
+        Invoice No.: <strong>${invNo}</strong><br>
+        Invoice Date: <strong>${invoiceData.date}</strong><br>
+        Job Reference: <strong>${invoiceData.jobNo}</strong><br>
+        Site Address: <strong>${invoiceData.address}</strong><br>
+        Job Description: <strong>Elevator Installation</strong>
+      </div>
+    </div>
+    <table class="inv-table">
+      <thead><tr>
+        <th>Description</th>
+        <th style="text-align:right">Price (excl. GST)</th>
+        <th style="text-align:right">GST</th>
+      </tr></thead>
+      <tbody>${linesHtml}</tbody>
+    </table>
+    <div class="inv-totals">
+      <div class="inv-totals-row"><span>Subtotal</span><span>$${invoiceData.subtotal.toLocaleString('en-AU',{minimumFractionDigits:2})}</span></div>
+      <div class="inv-totals-row"><span>GST (10%)</span><span>$${invoiceData.gst.toLocaleString('en-AU',{minimumFractionDigits:2})}</span></div>
+      <div class="inv-totals-row total"><span>TOTAL DUE</span><span>$${invoiceData.total.toLocaleString('en-AU',{minimumFractionDigits:2})}</span></div>
+    </div>
+    <div class="inv-section-title">Payment Details</div>
+    <hr class="inv-divider-thin">
+    <div class="inv-details">
+      Bank: ${PAYMENT.bank}<br>
+      Account Name: ${PAYMENT.accountName}<br>
+      BSB: ${PAYMENT.bsb}<br>
+      Account No: ${PAYMENT.accountNo}<br>
+      Reference: Please quote Invoice No. ${invNo}
+    </div>
+    <div class="inv-section-title">Notes</div>
+    <hr class="inv-divider-thin">
+    <div class="inv-details">Please contact Ben on ${BEN.phone} for any queries.</div>
+    <div class="inv-footer">Ben Shum Electrical Contracting &nbsp;|&nbsp; ABN: ${BEN.abn} &nbsp;|&nbsp; ${BEN.phone} &nbsp;|&nbsp; ${BEN.email}</div>
+  `;
+
+  document.getElementById('preview-section').style.display = 'block';
+  document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Save last invoice number
+  localStorage.setItem('lastInvoiceNo', invNo);
+}
+
+// ─── PDF Download ────────────────────────────────────────────────────────────
+function downloadPDF() {
+  if (!invoiceData) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const navy = [26, 26, 46];
+  const gold = [201, 168, 76];
+  const grey = [154, 154, 142];
+  const lightGrey = [232, 232, 226];
+  const white = [255, 255, 255];
+  const black = [26, 26, 26];
+
+  const W = 210, ML = 15, MR = 15, col2 = 120;
+
+  let y = 18;
+
+  // Header
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.setTextColor(...navy);
+  doc.text(BEN.name, ML, y);
+
+  doc.setFontSize(28);
+  doc.text('INVOICE', W - MR, y, { align: 'right' });
+
+  y += 7;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...grey);
+  doc.text(BEN.title, ML, y);
+
+  y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(80,80,80);
+  [BEN.address, `Phone: ${BEN.phone}`, `Email: ${BEN.email}`, `ABN: ${BEN.abn}`].forEach(line => {
+    doc.text(line, ML, y); y += 5;
+  });
+
+  // Divider
+  y += 3;
+  doc.setDrawColor(...navy);
+  doc.setLineWidth(0.8);
+  doc.line(ML, y, W - MR, y);
+  y += 8;
+
+  // Bill To + Invoice meta
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...grey);
+  doc.text('BILL TO', ML, y);
+
+  let yRight = y;
+  const metaRows = [
+    ['Invoice No.:', invoiceData.invNo],
+    ['Invoice Date:', invoiceData.date],
+    ['Job Reference:', invoiceData.jobNo],
+    ['Site Address:', invoiceData.address],
+    ['Job Description:', 'Elevator Installation'],
+  ];
+  metaRows.forEach(([label, val]) => {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...grey);
+    doc.text(label, col2, yRight, { align: 'right' });
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...black);
+    doc.text(val, W - MR, yRight, { align: 'right' });
+    yRight += 6;
+  });
+
+  y += 6;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...navy);
+  doc.text(CLIENT.name, ML, y); y += 5;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60,60,60);
+  [CLIENT.address, CLIENT.suburb, `Phone: ${CLIENT.phone}`, `Email: ${CLIENT.email}`].forEach(line => {
+    doc.text(line, ML, y); y += 5;
+  });
+
+  y = Math.max(y, yRight) + 8;
+
+  // Table header
+  doc.setFillColor(...navy);
+  doc.rect(ML, y, W - ML - MR, 8, 'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...white);
+  doc.text('Description', ML + 4, y + 5.5);
+  doc.text('Price (excl. GST)', 148, y + 5.5, { align: 'right' });
+  doc.text('GST', W - MR - 2, y + 5.5, { align: 'right' });
+  y += 8;
+
+  // Line items
+  invoiceData.lines.forEach((line, i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 248, 245);
+      doc.rect(ML, y, W - ML - MR, 9, 'F');
+    }
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...black);
+    doc.text(line.desc, ML + 4, y + 6);
+    doc.text('$' + line.ex.toLocaleString('en-AU',{minimumFractionDigits:2}), 148, y + 6, { align: 'right' });
+    doc.text('$' + line.gst.toLocaleString('en-AU',{minimumFractionDigits:2}), W - MR - 2, y + 6, { align: 'right' });
+    doc.setDrawColor(...lightGrey);
+    doc.setLineWidth(0.3);
+    doc.line(ML, y + 9, W - MR, y + 9);
+    y += 9;
+  });
+
+  y += 6;
+  // Totals
+  const totalsX = 148;
+  [
+    ['Subtotal', invoiceData.subtotal],
+    ['GST (10%)', invoiceData.gst],
+  ].forEach(([label, val]) => {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...grey);
+    doc.text(label, totalsX, y, { align: 'right' });
+    doc.setTextColor(...black);
+    doc.text('$' + val.toLocaleString('en-AU',{minimumFractionDigits:2}), W - MR - 2, y, { align: 'right' });
+    y += 6;
+  });
+
+  // Total due box
+  doc.setFillColor(244,244,240);
+  doc.rect(totalsX - 30, y - 1, W - MR - (totalsX - 30), 10, 'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...navy);
+  doc.text('TOTAL DUE', totalsX, y + 6.5, { align: 'right' });
+  doc.text('$' + invoiceData.total.toLocaleString('en-AU',{minimumFractionDigits:2}), W - MR - 2, y + 6.5, { align: 'right' });
+  y += 18;
+
+  // Payment details
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...navy);
+  doc.text('PAYMENT DETAILS', ML, y); y += 3;
+  doc.setDrawColor(...lightGrey);
+  doc.setLineWidth(0.5);
+  doc.line(ML, y, W - MR, y); y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60,60,60);
+  [
+    `Bank: ${PAYMENT.bank}`,
+    `Account Name: ${PAYMENT.accountName}`,
+    `BSB: ${PAYMENT.bsb}`,
+    `Account No: ${PAYMENT.accountNo}`,
+    `Reference: Please quote Invoice No. ${invoiceData.invNo}`,
+  ].forEach(line => { doc.text(line, ML, y); y += 5.5; });
+
+  y += 4;
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...navy);
+  doc.text('NOTES', ML, y); y += 3;
+  doc.setLineWidth(0.5);
+  doc.line(ML, y, W - MR, y); y += 6;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60,60,60);
+  doc.text(`Please contact Ben on ${BEN.phone} for any queries.`, ML, y);
+
+  // Footer
+  y = 282;
+  doc.setDrawColor(...lightGrey);
+  doc.line(ML, y, W - MR, y); y += 5;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...grey);
+  doc.text(`Ben Shum Electrical Contracting  |  ABN: ${BEN.abn}  |  ${BEN.phone}  |  ${BEN.email}`, W/2, y, { align: 'center' });
+
+  doc.save(`Ben_Shum_Invoice_${invoiceData.invNo}.pdf`);
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function showStatus(msg, type) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'status ' + type;
+}
+function hideStatus() {
+  document.getElementById('status-msg').className = 'status';
+}
+function resetForm() {
+  currentJob = null;
+  invoiceData = null;
+  document.getElementById('job-input').value = '';
+  document.getElementById('job-details').style.display = 'none';
+  document.getElementById('preview-section').style.display = 'none';
+  hideStatus();
+  document.getElementById('job-input').focus();
+}
+</script>
+</body>
+</html>
